@@ -16,6 +16,7 @@ class GroceryList extends StatefulWidget {
 
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
+  var _isLoding = true;
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _GroceryListState extends State<GroceryList> {
 
     setState(() {
       _groceryItems = _loadedItems;
+      _isLoding = false;
     });
   }
 
@@ -71,6 +73,31 @@ class _GroceryListState extends State<GroceryList> {
 
   @override
   Widget build(BuildContext context) {
+    Widget widget = const Padding(
+      padding: EdgeInsets.all(20),
+      child: Center(
+        child: Text('You\'ve got no items yet'),
+      ),
+    );
+
+    if (_isLoding) {
+      widget = const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_groceryItems.isNotEmpty) {
+      widget = ListView.builder(
+        itemCount: _groceryItems.length,
+        itemBuilder: (context, index) {
+          return GroceryListItem(
+            item: _groceryItems[index],
+            onSwipe: _removeItem,
+          );
+        },
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Groceries'),
@@ -81,24 +108,7 @@ class _GroceryListState extends State<GroceryList> {
           ),
         ],
       ),
-      body: _groceryItems.isNotEmpty
-          ? ListView.builder(
-              itemCount: _groceryItems.length,
-              itemBuilder: (context, index) {
-                return GroceryListItem(
-                  item: _groceryItems[index],
-                  onSwipe: _removeItem,
-                );
-              },
-            )
-          : const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(
-                child: Text(
-                  'You\'ve got no items yet',
-                ),
-              ),
-            ),
+      body: widget,
     );
   }
 }
