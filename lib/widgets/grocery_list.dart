@@ -17,6 +17,7 @@ class GroceryList extends StatefulWidget {
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
   var _isLoding = true;
+  String? _error;
 
   @override
   void initState() {
@@ -30,14 +31,21 @@ class _GroceryListState extends State<GroceryList> {
       'shopping-list.json',
     );
     final response = await http.get(url);
+
+    if (response.statusCode >= 400) {
+      setState(() {
+        _error = 'Failed to fetch data. Please try again.';
+      });
+    }
     final Map<String, dynamic> listData = json.decode(response.body);
-    final List<GroceryItem> _loadedItems = [];
+    final List<GroceryItem> loadedItems = [];
+
     for (var item in listData.entries) {
       final category = categories.entries
           .firstWhere(
               (catItem) => catItem.value.title == item.value['category'])
           .value;
-      _loadedItems.add(
+      loadedItems.add(
         GroceryItem(
           id: item.key,
           name: item.value['name'],
@@ -48,7 +56,7 @@ class _GroceryListState extends State<GroceryList> {
     }
 
     setState(() {
-      _groceryItems = _loadedItems;
+      _groceryItems = loadedItems;
       _isLoding = false;
     });
   }
@@ -67,8 +75,30 @@ class _GroceryListState extends State<GroceryList> {
     }
   }
 
-  void _removeItem(GroceryItem item) {
-    _groceryItems.remove(item);
+  void _removeItem(GroceryItem item) async {
+    final index = _groceryItems.indexOf(item);
+    setState(() {
+      _groceryItems.remove(item);
+    });
+
+    final url = Uri.https(
+      'flutter-sample-app-6c948-default-rtdb.europe-west1.firebasedatabase.app',
+      'shopping-list/${item.id}.json',
+    );
+
+    final response = await http.delete(url);
+
+    if (response.statusCode >= 400) {
+      _showErrorMessage(
+        response.reasonPhrase ?? '',
+        () {
+          _removeItem(item);
+        },
+      );
+      setState(() {
+        _groceryItems.insert(index, item);
+      });
+    }
   }
 
   @override
@@ -98,6 +128,12 @@ class _GroceryListState extends State<GroceryList> {
       );
     }
 
+    if (_error != null) {
+      widget = Center(
+        child: Text(_error!),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Groceries'),
@@ -109,6 +145,22 @@ class _GroceryListState extends State<GroceryList> {
         ],
       ),
       body: widget,
+    );
+  }
+
+  void _showErrorMessage(String errorMessage, VoidCallback onRetry) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        content: Text(errorMessage),
+        action: SnackBarAction(
+          label: 'Retry',
+          onPressed: () {
+            onRetry();
+          },
+        ),
+      ),
     );
   }
 }
