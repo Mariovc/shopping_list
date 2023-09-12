@@ -45,6 +45,7 @@ class _NewItemState extends State<NewItem> {
 
       final Map<String, dynamic> responseData = json.decode(response.body);
 
+      // ignore: use_build_context_synchronously
       if (!context.mounted) {
         return;
       }
